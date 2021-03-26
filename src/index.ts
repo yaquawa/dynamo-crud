@@ -1,0 +1,11 @@
+export * from './GetItemCommand'
+export * from './QueryCommand'
+export * from './UpdateItemCommand'
+export * from './DeleteItemCommand'
+export * from './PutItemCommand'
+export * from './CommandResult'
+export * from './UpdateExpressionBuilder'
+export * from './KeyConditionExpressionBuilder'
+
+export * from './types'
+export * from './DynamoTable'
