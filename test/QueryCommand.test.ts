@@ -15,6 +15,12 @@ describe('QueryCommand', () => {
     const result = await queryCommand.index('byTitle').where('title', '=', 'my post').run()
 
     expect(result.data).toEqual([post])
+    expect(result.rawResponse).toBeInstanceOf(Array)
+  })
+
+  it('get partial items', async () => {
+    const result = await queryCommand.run({ getAll: false })
+    expect(result.rawResponse).not.toBeInstanceOf(Array)
   })
 })
 

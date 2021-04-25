@@ -1,10 +1,12 @@
-import { DynamoDB } from '@aws-sdk/client-dynamodb'
+import { DynamoDB, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
 import { QueryCommandInput } from '@aws-sdk/client-dynamodb/commands/QueryCommand'
 import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
 import { BatchUpdateItemCommand } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { CommandResult } from './CommandResult'
 import { GetPrimaryKey, PrimaryKeyCandidates, PrimaryKeyNameCandidates } from './types'
+
+type QueryCommandRunOptions = { getAll?: boolean }
 
 export class QueryCommand<
   Model extends Record<string, any>,
@@ -51,7 +53,45 @@ export class QueryCommand<
     return this.setQueryCommandInput({ Limit: limit })
   }
 
-  async run() {
+  async run<Options extends QueryCommandRunOptions = { getAll: true }>(
+    options?: Options
+  ): Promise<
+    CommandResult<
+      Model[] | undefined,
+      true extends Options['getAll'] ? QueryCommandOutput[] : QueryCommandOutput
+    >
+  > {
+    const commandResult = await this.get()
+    const defaultOptions: QueryCommandRunOptions = {
+      getAll: true,
+    }
+
+    options = { ...defaultOptions, ...(options || {}) } as Options
+
+    if (options.getAll) {
+      let items = commandResult.data
+      let rawResponses = [commandResult.rawResponse]
+      let LastEvaluatedKey = commandResult.rawResponse.LastEvaluatedKey
+
+      while (LastEvaluatedKey) {
+        const result = await this.get({ ExclusiveStartKey: LastEvaluatedKey })
+
+        if (result.data) {
+          items = items?.concat(result.data)
+        }
+
+        rawResponses.push(result.rawResponse)
+
+        LastEvaluatedKey = result.rawResponse.LastEvaluatedKey
+      }
+
+      return new CommandResult(items, rawResponses) as any
+    }
+
+    return commandResult as any
+  }
+
+  private async get(options: Partial<QueryCommandInput> = {}) {
     const {
       KeyConditionExpression,
       ExpressionAttributeValues,
@@ -64,6 +104,7 @@ export class QueryCommand<
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       ...this.queryCommandInput,
+      ...options,
     })
 
     let items: Model[] | undefined
