@@ -1,9 +1,10 @@
-import { DynamoDB } from '@aws-sdk/client-dynamodb'
-import { UpdateItemCommand } from './UpdateItemCommand'
-import { UpdatableQueryCommand } from './QueryCommand'
+import { ScanCommand } from './ScanCommand'
 import { GetItemCommand } from './GetItemCommand'
-import { DeleteItemCommand } from './DeleteItemCommand'
 import { PutItemCommand } from './PutItemCommand'
+import { DynamoDB } from '@aws-sdk/client-dynamodb'
+import { UpdatableQueryCommand } from './QueryCommand'
+import { UpdateItemCommand } from './UpdateItemCommand'
+import { DeleteItemCommand } from './DeleteItemCommand'
 import { GetPrimaryKey, PrimaryKeyNameCandidates } from './types'
 
 export class DynamoTable<
@@ -17,6 +18,13 @@ export class DynamoTable<
   constructor(args: { client: DynamoDB; tableName: string }) {
     this.client = args.client
     this.tableName = args.tableName
+  }
+
+  scan() {
+    return new ScanCommand<Model>({
+      client: this.client,
+      tableName: this.tableName,
+    })
   }
 
   update(primaryKey: GetPrimaryKey<Model, BasePK, BaseSK>) {

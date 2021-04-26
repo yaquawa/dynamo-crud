@@ -1,10 +1,9 @@
-import { DynamoDB, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
-import { QueryCommandInput } from '@aws-sdk/client-dynamodb/commands/QueryCommand'
-import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
-import { BatchUpdateItemCommand } from './UpdateItemCommand'
-import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { CommandResult } from './CommandResult'
+import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { BatchUpdateItemCommand } from './UpdateItemCommand'
+import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
 import { GetPrimaryKey, PrimaryKeyCandidates, PrimaryKeyNameCandidates } from './types'
+import { DynamoDB, QueryCommandInput, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
 
 type QueryCommandRunOptions = { getAll?: boolean }
 
