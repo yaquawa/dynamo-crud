@@ -109,7 +109,7 @@ export class QueryCommand<
 
     let items: Model[] | undefined
 
-    if (rawResponse.Items) {
+    if (rawResponse.Items && rawResponse.Items.length > 0) {
       items = rawResponse.Items.map((item) => unmarshall(item)) as Model[]
     }
 
