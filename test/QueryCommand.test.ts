@@ -32,6 +32,8 @@ describe('UpdatableQueryCommand', () => {
       id: 100,
       title: 'myTitle',
     },
+    basePartitionKey: 'id',
+    baseSortKey: 'title',
   })
 
   it('returns items', async () => {

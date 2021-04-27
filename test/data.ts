@@ -47,6 +47,12 @@ export const post: PostModel = {
 }
 
 export class MockDynamoDB {
+  async scan() {
+    return {
+      Items: [marshall(post)],
+    }
+  }
+
   async query() {
     return {
       Items: [marshall(post)],

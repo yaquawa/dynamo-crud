@@ -1,9 +1,9 @@
-import { marshall } from '@aws-sdk/util-dynamodb'
-import { DynamoDB } from '@aws-sdk/client-dynamodb'
-import { UpdateExpressionBuilder } from './UpdateExpressionBuilder'
-import { UpdateItemCommandInput } from '@aws-sdk/client-dynamodb/commands/UpdateItemCommand'
 import { CommandResult } from './CommandResult'
-import { PrimaryKeyCandidates } from './types'
+import { marshall } from '@aws-sdk/util-dynamodb'
+import { UpdateExpressionBuilder } from './UpdateExpressionBuilder'
+import { DynamoDB, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
+import { PrimaryKeyCandidates, PrimaryKeyNameCandidates } from './types'
+import { UpdateItemCommandInput } from '@aws-sdk/client-dynamodb/commands/UpdateItemCommand'
 
 export class UpdateItemCommand<Model extends Record<string, any>> extends UpdateExpressionBuilder<Model> {
   private readonly client: DynamoDB
@@ -74,5 +74,50 @@ export class BatchUpdateItemCommand<
     const rawResponses = await Promise.all(updatePromises)
 
     return new CommandResult(undefined, rawResponses)
+  }
+}
+
+export class Updatable<
+  Model extends Record<string, any>,
+  GetItemsCommand extends { run(): Promise<CommandResult<Model[] | undefined, QueryCommandOutput[]>> }
+> extends BatchUpdateItemCommand<Model> {
+  private readonly getItemsCommand: GetItemsCommand
+  private readonly basePartitionKey: PrimaryKeyNameCandidates<Model>
+  private readonly baseSortKey?: PrimaryKeyNameCandidates<Model>
+
+  constructor(args: {
+    client: DynamoDB
+    tableName: string
+    basePartitionKey: PrimaryKeyNameCandidates<Model>
+    baseSortKey?: PrimaryKeyNameCandidates<Model>
+    getItemsCommand: GetItemsCommand
+  }) {
+    super(args)
+    this.getItemsCommand = args.getItemsCommand
+    this.basePartitionKey = args.basePartitionKey
+    this.baseSortKey = args.baseSortKey
+  }
+
+  async run() {
+    const shouldUpdate = this.compile().UpdateExpression !== ''
+
+    if (!shouldUpdate) {
+      return new CommandResult(undefined, [])
+    }
+
+    const items = (await this.getItemsCommand.run()).data
+    if (!items) {
+      return new CommandResult(undefined, [])
+    }
+
+    const { basePartitionKey, baseSortKey } = this
+    const itemPrimaryKeys = items.map((item) => {
+      return {
+        [basePartitionKey]: item[basePartitionKey],
+        ...(baseSortKey ? { [baseSortKey]: item[baseSortKey] } : {}),
+      } as PrimaryKeyCandidates<Model>
+    })
+
+    return super.run(itemPrimaryKeys)
   }
 }

@@ -1,8 +1,8 @@
 import { CommandResult } from './CommandResult'
+import { Updatable } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
-import { BatchUpdateItemCommand } from './UpdateItemCommand'
+import { GetPrimaryKey, PrimaryKeyNameCandidates } from './types'
 import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
-import { GetPrimaryKey, PrimaryKeyCandidates, PrimaryKeyNameCandidates } from './types'
 import { DynamoDB, QueryCommandInput, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
 
 type QueryCommandRunOptions = { getAll?: boolean }
@@ -121,56 +121,29 @@ export class UpdatableQueryCommand<
   PK extends PrimaryKeyNameCandidates<Model>,
   SK extends PrimaryKeyNameCandidates<Model> = never
 > extends QueryCommand<Model, PK, SK> {
-  public readonly update: Updatable<Model, PK, SK>
+  public readonly update: Updatable<Model, UpdatableQueryCommand<Model, PK, SK>>
 
   constructor({
     client,
     tableName,
     primaryKey,
+    basePartitionKey,
+    baseSortKey,
   }: {
     client: DynamoDB
     tableName: string
     primaryKey: GetPrimaryKey<Model, PK, SK, false>
+    basePartitionKey: PrimaryKeyNameCandidates<Model>
+    baseSortKey?: PrimaryKeyNameCandidates<Model>
   }) {
     super({ primaryKey, client, tableName })
 
-    this.update = new Updatable<Model, PK, SK>({ client, tableName, queryCommand: this })
-  }
-}
-
-class Updatable<
-  Model extends Record<string, any>,
-  PK extends PrimaryKeyNameCandidates<Model>,
-  SK extends PrimaryKeyNameCandidates<Model> = never
-> extends BatchUpdateItemCommand<Model> {
-  private queryCommand: UpdatableQueryCommand<Model, PK, SK>
-
-  constructor(args: {
-    client: DynamoDB
-    tableName: string
-    queryCommand: UpdatableQueryCommand<Model, PK, SK>
-  }) {
-    super(args)
-    this.queryCommand = args.queryCommand
-  }
-
-  async run() {
-    const items = (await this.queryCommand.run()).data
-    const shouldUpdate = this.compile().UpdateExpression !== ''
-    const sortKeyName = this.queryCommand.getSortKeyName()
-    const partitionKeyName = this.queryCommand.partitionKeyName
-
-    if (items && items.length && shouldUpdate) {
-      const itemPrimaryKeys = items.map((item) => {
-        return {
-          [partitionKeyName]: item[partitionKeyName],
-          ...(sortKeyName ? { [sortKeyName]: item[sortKeyName] } : {}),
-        } as PrimaryKeyCandidates<Model>
-      })
-
-      return super.run(itemPrimaryKeys)
-    }
-
-    return new CommandResult(undefined, [])
+    this.update = new Updatable<Model, UpdatableQueryCommand<Model, PK, SK>>({
+      client,
+      tableName,
+      basePartitionKey,
+      baseSortKey,
+      getItemsCommand: this,
+    })
   }
 }

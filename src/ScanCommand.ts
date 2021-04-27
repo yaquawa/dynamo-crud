@@ -1,5 +1,7 @@
 import { CommandResult } from './CommandResult'
+import { Updatable } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { PrimaryKeyNameCandidates } from './types'
 import { DynamoDB, ScanCommandInput, ScanCommandOutput } from '@aws-sdk/client-dynamodb'
 
 type ScanCommandRunOptions = { getAll?: boolean }
@@ -87,5 +89,31 @@ export class ScanCommand<Model extends Record<string, any>> {
     }
 
     return new CommandResult(items, rawResponse)
+  }
+}
+
+export class UpdatableScanCommand<Model extends Record<string, any>> extends ScanCommand<Model> {
+  public readonly update: Updatable<Model, UpdatableScanCommand<Model>>
+
+  constructor({
+    client,
+    tableName,
+    basePartitionKey,
+    baseSortKey,
+  }: {
+    client: DynamoDB
+    tableName: string
+    basePartitionKey: PrimaryKeyNameCandidates<Model>
+    baseSortKey?: PrimaryKeyNameCandidates<Model>
+  }) {
+    super({ client, tableName })
+
+    this.update = new Updatable<Model, UpdatableScanCommand<Model>>({
+      client,
+      tableName,
+      basePartitionKey,
+      baseSortKey,
+      getItemsCommand: this,
+    })
   }
 }

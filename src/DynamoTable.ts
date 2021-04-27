@@ -1,4 +1,4 @@
-import { ScanCommand } from './ScanCommand'
+import { UpdatableScanCommand } from './ScanCommand'
 import { GetItemCommand } from './GetItemCommand'
 import { PutItemCommand } from './PutItemCommand'
 import { DynamoDB } from '@aws-sdk/client-dynamodb'
@@ -14,16 +14,24 @@ export class DynamoTable<
 > {
   private readonly client: DynamoDB
   public readonly tableName: string
+  public readonly partitionKey: BasePK
+  public readonly sortKey?: BaseSK
 
-  constructor(args: { client: DynamoDB; tableName: string }) {
+  constructor(args: { client: DynamoDB; tableName: string; partitionKey: BasePK; sortKey?: BaseSK }) {
     this.client = args.client
     this.tableName = args.tableName
+    this.partitionKey = args.partitionKey
+    this.sortKey = args.sortKey
   }
 
   scan() {
-    return new ScanCommand<Model>({
-      client: this.client,
-      tableName: this.tableName,
+    const { client, tableName, partitionKey: basePartitionKey, sortKey: baseSortKey } = this
+
+    return new UpdatableScanCommand<Model>({
+      client,
+      tableName,
+      basePartitionKey,
+      baseSortKey,
     })
   }
 
@@ -42,6 +50,8 @@ export class DynamoTable<
       client: this.client,
       tableName: this.tableName,
       primaryKey: primaryKey as any,
+      basePartitionKey: this.partitionKey,
+      baseSortKey: this.sortKey,
     })
   }
 

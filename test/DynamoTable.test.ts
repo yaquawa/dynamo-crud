@@ -8,9 +8,11 @@ describe('DynamoTable', () => {
   const dynamoTable = new DynamoTable<PostModel, 'id', 'title'>({
     client: mockDynamoDB,
     tableName: 'posts',
+    partitionKey: 'id',
+    sortKey: 'title',
   })
 
-  it('return item', async () => {
+  test('query items', async () => {
     const { data } = await dynamoTable
       .query({ id: 100, title: 'hello' })
       .index('byTitle')
@@ -20,7 +22,13 @@ describe('DynamoTable', () => {
     expect(data).toEqual([post])
   })
 
-  it('query then update items', async () => {
+  test('scan items', async () => {
+    const { data } = await dynamoTable.scan().run()
+
+    expect(data).toEqual([post])
+  })
+
+  test('query then update items', async () => {
     const { data } = await dynamoTable
       .query({ id: 100, title: 'hello' })
       .index('byTitle')
@@ -31,19 +39,19 @@ describe('DynamoTable', () => {
     expect(data).toEqual(undefined)
   })
 
-  it('get item', async () => {
+  test('get item', async () => {
     const { data } = await dynamoTable.find({ id: 100, title: 'hello' }).run()
 
     expect(data).toEqual(post)
   })
 
-  it('update item', async () => {
+  test('update item', async () => {
     const { data } = await dynamoTable.update({ id: 100, title: 'hello' }).set('author.name', 'foo').run()
 
     expect(data).toEqual(undefined)
   })
 
-  it('delete item', async () => {
+  test('delete item', async () => {
     const { data } = await dynamoTable.delete({ id: 100, title: 'hello' }).run()
 
     expect(data).toEqual(undefined)
