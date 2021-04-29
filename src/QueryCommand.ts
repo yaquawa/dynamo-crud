@@ -1,11 +1,10 @@
 import { CommandResult } from './CommandResult'
 import { Updatable } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
+import { ReadItemsCommandReadableStream } from './ReadableStream'
 import { GetPrimaryKey, PrimaryKeyNameCandidates } from './types'
+import { DynamoDB, QueryCommandInput } from '@aws-sdk/client-dynamodb'
 import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
-import { DynamoDB, QueryCommandInput, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
-
-type QueryCommandRunOptions = { getAll?: boolean }
 
 export class QueryCommand<
   Model extends Record<string, any>,
@@ -30,67 +29,33 @@ export class QueryCommand<
     this.tableName = tableName
   }
 
-  setQueryCommandInput(options: Partial<QueryCommandInput>): this {
+  setCommandInput(options: Partial<QueryCommandInput>): this {
     this.queryCommandInput = { ...this.queryCommandInput, ...options }
 
     return this
   }
 
   index(indexName: string): this {
-    return this.setQueryCommandInput({
+    return this.setCommandInput({
       IndexName: indexName,
     })
   }
 
   select(...attributeNames: (keyof Model)[]): this {
-    return this.setQueryCommandInput({
+    return this.setCommandInput({
       ProjectionExpression: attributeNames.join(', '),
     })
   }
 
   limit(limit: number): this {
-    return this.setQueryCommandInput({ Limit: limit })
+    return this.setCommandInput({ Limit: limit })
   }
 
-  async run<Options extends QueryCommandRunOptions = { getAll: true }>(
-    options?: Options
-  ): Promise<
-    CommandResult<
-      Model[] | undefined,
-      true extends Options['getAll'] ? QueryCommandOutput[] : QueryCommandOutput
-    >
-  > {
-    const commandResult = await this.get()
-    const defaultOptions: QueryCommandRunOptions = {
-      getAll: true,
-    }
-
-    options = { ...defaultOptions, ...(options || {}) } as Options
-
-    if (options.getAll) {
-      let items = commandResult.data
-      let rawResponses = [commandResult.rawResponse]
-      let LastEvaluatedKey = commandResult.rawResponse.LastEvaluatedKey
-
-      while (LastEvaluatedKey) {
-        const result = await this.get({ ExclusiveStartKey: LastEvaluatedKey })
-
-        if (result.data) {
-          items = items?.concat(result.data)
-        }
-
-        rawResponses.push(result.rawResponse)
-
-        LastEvaluatedKey = result.rawResponse.LastEvaluatedKey
-      }
-
-      return new CommandResult(items, rawResponses) as any
-    }
-
-    return commandResult as any
+  createReadableStream(): ReadItemsCommandReadableStream<QueryCommand<Model, PK, SK>> {
+    return new ReadItemsCommandReadableStream({ command: this })
   }
 
-  private async get(options: Partial<QueryCommandInput> = {}) {
+  async _run() {
     const {
       KeyConditionExpression,
       ExpressionAttributeValues,
@@ -103,7 +68,6 @@ export class QueryCommand<
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       ...this.queryCommandInput,
-      ...options,
     })
 
     let items: Model[] | undefined

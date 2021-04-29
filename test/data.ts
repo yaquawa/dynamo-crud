@@ -1,5 +1,11 @@
 import { marshall } from '@aws-sdk/util-dynamodb'
 
+const wait = (ms: number) => {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 export type PostModel = {
   id: number
   title: string
@@ -48,28 +54,37 @@ export const post: PostModel = {
 
 export class MockDynamoDB {
   async scan() {
+    await wait(600)
     return {
-      Items: [marshall(post)],
+      Items: [marshall(post), marshall(post), marshall(post)],
     }
   }
 
   async query() {
+    await wait(300)
+
     return {
-      Items: [marshall(post)],
+      Items: [marshall(post), marshall(post)],
     }
   }
 
   async getItem() {
+    await wait(100)
+
     return {
       Item: marshall(post),
     }
   }
 
   async updateItem() {
+    await wait(100)
+
     return undefined
   }
 
   async deleteItem() {
+    await wait(100)
+
     return undefined
   }
 }

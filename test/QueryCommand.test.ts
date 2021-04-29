@@ -1,26 +1,30 @@
+import { DynamoDB } from '@aws-sdk/client-dynamodb'
 import { MockDynamoDB, post, PostModel } from './data'
 import { QueryCommand, UpdatableQueryCommand } from '../src'
-import { DynamoDB } from '@aws-sdk/client-dynamodb'
 
 const mockDynamoDB = (new MockDynamoDB() as unknown) as DynamoDB
 
 describe('QueryCommand', () => {
-  const queryCommand = new QueryCommand<PostModel, 'id', 'title'>({
-    client: mockDynamoDB,
-    tableName: 'posts',
-    primaryKey: { id: 100, title: 'myTitle' },
+  let queryCommand: QueryCommand<PostModel, 'id', 'title'>
+
+  beforeEach(() => {
+    queryCommand = new QueryCommand<PostModel, 'id', 'title'>({
+      client: mockDynamoDB,
+      tableName: 'posts',
+      primaryKey: { id: 100, title: 'myTitle' },
+    })
   })
 
   it('return item', async () => {
-    const result = await queryCommand.index('byTitle').where('title', '=', 'my post').run()
+    const readableStream = queryCommand.index('byTitle').where('title', '=', 'my post').createReadableStream()
 
-    expect(result.data).toEqual([post])
-    expect(result.rawResponse).toBeInstanceOf(Array)
-  })
+    let items: any[] = []
 
-  it('get partial items', async () => {
-    const result = await queryCommand.run({ getAll: false })
-    expect(result.rawResponse).not.toBeInstanceOf(Array)
+    for await (const { data } of readableStream) {
+      items = items.concat(data)
+    }
+
+    expect(items).toEqual([post, post])
   })
 })
 
@@ -37,17 +41,21 @@ describe('UpdatableQueryCommand', () => {
   })
 
   it('returns items', async () => {
-    const result = await queryCommand.index('byTitle').where('title', '=', 'my post').run()
+    const readableStream = queryCommand.index('byTitle').where('title', '=', 'my post').createReadableStream()
 
-    expect(result.data).toEqual([post])
+    let items: any[] = []
+
+    for await (const { data } of readableStream) {
+      items = items.concat(data)
+    }
+
+    expect(items).toEqual([post, post])
   })
 
   it('can update items after query', async () => {
-    const result = await queryCommand.update
+    await queryCommand.update
       .set('author.id', 10)
       .delete('categories', new Set(['cat-1']))
       .run()
-
-    expect(result.data).toEqual(undefined)
   })
 })

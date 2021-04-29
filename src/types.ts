@@ -58,3 +58,5 @@ type _ExtractPathExpressions<T, TargetType> = Exclude<
 export type ExtractPathExpressions<T, TargetType = any> = _ExtractPathExpressions<Required<T>, TargetType>
 
 export type GetTypeByPath<T, P> = P extends string ? Path<T, Split<P, '.'>> : never
+
+export type UnpackPromise<T extends Promise<any>> = T extends Promise<infer U> ? U : never

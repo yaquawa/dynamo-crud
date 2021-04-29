@@ -15,7 +15,7 @@ export class GetItemCommand<Model extends Record<string, any>> {
     this.primaryKey = args.primaryKey
   }
 
-  setGetItemCommandInput(getItemCommandInput: Partial<GetItemCommandInput>): this {
+  setCommandInput(getItemCommandInput: Partial<GetItemCommandInput>): this {
     this.getItemCommandInput = { ...this.getItemCommandInput, ...getItemCommandInput }
     return this
   }

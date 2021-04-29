@@ -1,8 +1,12 @@
+import { runParallel } from './utils'
+import { ScanCommand } from './ScanCommand'
+import { QueryCommand } from './QueryCommand'
 import { CommandResult } from './CommandResult'
 import { marshall } from '@aws-sdk/util-dynamodb'
 import { UpdateExpressionBuilder } from './UpdateExpressionBuilder'
-import { DynamoDB, QueryCommandOutput } from '@aws-sdk/client-dynamodb'
+import { UpdateItemsCommandReadableStream } from './ReadableStream'
 import { PrimaryKeyCandidates, PrimaryKeyNameCandidates } from './types'
+import { DynamoDB, UpdateItemCommandOutput } from '@aws-sdk/client-dynamodb'
 import { UpdateItemCommandInput } from '@aws-sdk/client-dynamodb/commands/UpdateItemCommand'
 
 export class UpdateItemCommand<Model extends Record<string, any>> extends UpdateExpressionBuilder<Model> {
@@ -18,7 +22,7 @@ export class UpdateItemCommand<Model extends Record<string, any>> extends Update
     this.primaryKey = args.primaryKey
   }
 
-  setUpdateItemCommandInput(updateItemCommandInput: Partial<UpdateItemCommandInput>): this {
+  setCommandInput(updateItemCommandInput: Partial<UpdateItemCommandInput>): this {
     this.updateItemCommandInput = { ...this.updateItemCommandInput, ...updateItemCommandInput }
     return this
   }
@@ -52,12 +56,22 @@ export class BatchUpdateItemCommand<
     this.tableName = args.tableName
   }
 
-  setUpdateItemCommandInput(updateItemCommandInput: Partial<UpdateItemCommandInput>): this {
+  setCommandInput(updateItemCommandInput: Partial<UpdateItemCommandInput>): this {
     this.updateItemCommandInput = { ...this.updateItemCommandInput, ...updateItemCommandInput }
     return this
   }
 
-  async run(primaryKeys: PrimaryKeyCandidates<Model>[]) {
+  async run(primaryKeys: PrimaryKeyCandidates<Model>[]): Promise<void> {
+    return this._run({ primaryKeys })
+  }
+
+  async _run<ShouldReturnValue extends boolean = false>({
+    primaryKeys,
+    shouldReturnValue,
+  }: {
+    primaryKeys: PrimaryKeyCandidates<Model>[]
+    shouldReturnValue?: ShouldReturnValue
+  }): Promise<true extends ShouldReturnValue ? CommandResult<undefined, UpdateItemCommandOutput[]> : void> {
     const { UpdateExpression, ExpressionAttributeValues, ExpressionAttributeNames } = this.compile()
 
     const updatePromises = primaryKeys.map((primaryKey) => {
@@ -71,15 +85,19 @@ export class BatchUpdateItemCommand<
       })
     })
 
+    if (!shouldReturnValue) {
+      return runParallel(updatePromises) as any
+    }
+
     const rawResponses = await Promise.all(updatePromises)
 
-    return new CommandResult(undefined, rawResponses)
+    return new CommandResult(undefined, rawResponses) as any
   }
 }
 
 export class Updatable<
   Model extends Record<string, any>,
-  GetItemsCommand extends { run(): Promise<CommandResult<Model[] | undefined, QueryCommandOutput[]>> }
+  GetItemsCommand extends QueryCommand<Model, any, any> | ScanCommand<Model>
 > extends BatchUpdateItemCommand<Model> {
   private readonly getItemsCommand: GetItemsCommand
   private readonly basePartitionKey: PrimaryKeyNameCandidates<Model>
@@ -98,26 +116,38 @@ export class Updatable<
     this.baseSortKey = args.baseSortKey
   }
 
-  async run() {
+  createReadableStream(): UpdateItemsCommandReadableStream<Model, Updatable<Model, GetItemsCommand>> {
+    return new UpdateItemsCommandReadableStream({ command: this, shouldReturnValue: true })
+  }
+
+  async run(): Promise<void> {
+    return new UpdateItemsCommandReadableStream<Model, Updatable<Model, GetItemsCommand>>({
+      command: this,
+      shouldReturnValue: false,
+    }).run()
+  }
+
+  async *getRunGenerator({ shouldReturnValue = false }: { shouldReturnValue?: boolean } = {}) {
     const shouldUpdate = this.compile().UpdateExpression !== ''
 
     if (!shouldUpdate) {
-      return new CommandResult(undefined, [])
+      yield new CommandResult(undefined, undefined)
+
+      return
     }
 
-    const items = (await this.getItemsCommand.run()).data
-    if (!items) {
-      return new CommandResult(undefined, [])
+    for await (const result of this.getItemsCommand.createReadableStream()) {
+      const items = result.data as Model[]
+
+      const { basePartitionKey, baseSortKey } = this
+      const itemPrimaryKeys = items.map((item) => {
+        return {
+          [basePartitionKey]: item[basePartitionKey],
+          ...(baseSortKey ? { [baseSortKey]: item[baseSortKey] } : {}),
+        } as PrimaryKeyCandidates<Model>
+      })
+
+      yield super._run({ primaryKeys: itemPrimaryKeys, shouldReturnValue })
     }
-
-    const { basePartitionKey, baseSortKey } = this
-    const itemPrimaryKeys = items.map((item) => {
-      return {
-        [basePartitionKey]: item[basePartitionKey],
-        ...(baseSortKey ? { [baseSortKey]: item[baseSortKey] } : {}),
-      } as PrimaryKeyCandidates<Model>
-    })
-
-    return super.run(itemPrimaryKeys)
   }
 }

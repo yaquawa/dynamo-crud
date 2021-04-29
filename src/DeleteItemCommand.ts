@@ -15,7 +15,7 @@ export class DeleteItemCommand<Model extends Record<string, any>> {
     this.primaryKey = args.primaryKey
   }
 
-  setDeleteItemCommandInput(deleteItemCommandInput: Partial<DeleteItemCommandInput>): this {
+  setCommandInput(deleteItemCommandInput: Partial<DeleteItemCommandInput>): this {
     this.deleteItemCommandInput = { ...this.deleteItemCommandInput, ...deleteItemCommandInput }
     return this
   }

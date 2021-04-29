@@ -13,30 +13,44 @@ describe('DynamoTable', () => {
   })
 
   test('query items', async () => {
-    const { data } = await dynamoTable
+    const readableStream = dynamoTable
       .query({ id: 100, title: 'hello' })
       .index('byTitle')
       .where('title', '=', 'myTitle')
-      .run()
+      .createReadableStream()
 
-    expect(data).toEqual([post])
+    let items: any[] = []
+
+    for await (const { data } of readableStream) {
+      items = items.concat(data)
+    }
+
+    expect(items).toEqual([post, post])
   })
 
   test('scan items', async () => {
-    const { data } = await dynamoTable.scan().run()
+    const readableStream = dynamoTable.scan().createReadableStream()
 
-    expect(data).toEqual([post])
+    let items: any[] = []
+
+    for await (const { data } of readableStream) {
+      items = items.concat(data)
+    }
+
+    expect(items).toEqual([post, post, post])
   })
 
   test('query then update items', async () => {
-    const { data } = await dynamoTable
+    const readableStream = dynamoTable
       .query({ id: 100, title: 'hello' })
       .index('byTitle')
       .where('title', '=', 'myTitle')
       .update.set('author.id', 100)
-      .run()
+      .createReadableStream()
 
-    expect(data).toEqual(undefined)
+    for await (const { data } of readableStream) {
+      expect(data).toEqual(undefined)
+    }
   })
 
   test('get item', async () => {

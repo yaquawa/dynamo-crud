@@ -14,7 +14,7 @@ export class PutItemCommand<Model extends Record<string, any>> {
     this.item = args.item
   }
 
-  setPutItemCommandInput(putItemCommandInput: Partial<PutItemCommandInput>): this {
+  setCommandInput(putItemCommandInput: Partial<PutItemCommandInput>): this {
     this.putItemCommandInput = { ...this.putItemCommandInput, ...putItemCommandInput }
     return this
   }
