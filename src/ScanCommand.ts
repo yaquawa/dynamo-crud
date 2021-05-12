@@ -1,18 +1,28 @@
 import { CommandResult } from './CommandResult'
 import { Updatable } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
-import { PrimaryKeyNameCandidates } from './types'
+import { PrimaryKeyNameCandidates, TokenBucket } from './types'
+import { ReadItemsCommandReadableStream } from './stream'
 import { DynamoDB, ScanCommandInput } from '@aws-sdk/client-dynamodb'
-import { ReadItemsCommandReadableStream } from './ReadableStream'
 
 export class ScanCommand<Model extends Record<string, any>> {
   protected client: DynamoDB
   public readonly tableName: string
+  public readonly tokenBucket?: TokenBucket
   private scanCommandInput: Partial<ScanCommandInput> = {}
 
-  constructor({ client, tableName }: { client: DynamoDB; tableName: string }) {
+  constructor({
+    client,
+    tableName,
+    tokenBucket,
+  }: {
+    client: DynamoDB
+    tableName: string
+    tokenBucket?: TokenBucket
+  }) {
     this.client = client
     this.tableName = tableName
+    this.tokenBucket = tokenBucket
   }
 
   setCommandInput(options: Partial<ScanCommandInput>) {
@@ -44,6 +54,7 @@ export class ScanCommand<Model extends Record<string, any>> {
     const rawResponse = await this.client.scan({
       TableName: this.tableName,
       ...this.scanCommandInput,
+      ...(this.tokenBucket ? { ReturnConsumedCapacity: 'TOTAL' } : {}),
     })
 
     let items: Model[] | undefined
@@ -64,11 +75,13 @@ export class UpdatableScanCommand<Model extends Record<string, any>> extends Sca
     tableName,
     basePartitionKey,
     baseSortKey,
+    tokenBucket,
   }: {
     client: DynamoDB
     tableName: string
     basePartitionKey: PrimaryKeyNameCandidates<Model>
     baseSortKey?: PrimaryKeyNameCandidates<Model>
+    tokenBucket?: TokenBucket
   }) {
     super({ client, tableName })
 
@@ -78,6 +91,7 @@ export class UpdatableScanCommand<Model extends Record<string, any>> extends Sca
       basePartitionKey,
       baseSortKey,
       getItemsCommand: this,
+      tokenBucket,
     })
   }
 }

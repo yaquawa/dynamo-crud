@@ -1,11 +1,10 @@
-import { runParallel } from './utils'
 import { ScanCommand } from './ScanCommand'
 import { QueryCommand } from './QueryCommand'
 import { CommandResult } from './CommandResult'
 import { marshall } from '@aws-sdk/util-dynamodb'
 import { UpdateExpressionBuilder } from './UpdateExpressionBuilder'
-import { UpdateItemsCommandReadableStream } from './ReadableStream'
-import { PrimaryKeyCandidates, PrimaryKeyNameCandidates } from './types'
+import { UpdateItemsCommandReadableStream } from './stream'
+import { PrimaryKeyCandidates, PrimaryKeyNameCandidates, TokenBucket } from './types'
 import { DynamoDB, UpdateItemCommandOutput } from '@aws-sdk/client-dynamodb'
 import { UpdateItemCommandInput } from '@aws-sdk/client-dynamodb/commands/UpdateItemCommand'
 
@@ -48,12 +47,14 @@ export class BatchUpdateItemCommand<
 > extends UpdateExpressionBuilder<Model> {
   private readonly client: DynamoDB
   private readonly tableName: string
+  private readonly tokenBucket?: TokenBucket
   private updateItemCommandInput: Partial<UpdateItemCommandInput> = {}
 
-  constructor(args: { client: DynamoDB; tableName: string }) {
+  constructor(args: { client: DynamoDB; tableName: string; tokenBucket?: TokenBucket }) {
     super()
     this.client = args.client
     this.tableName = args.tableName
+    this.tokenBucket = args.tokenBucket
   }
 
   setCommandInput(updateItemCommandInput: Partial<UpdateItemCommandInput>): this {
@@ -73,25 +74,30 @@ export class BatchUpdateItemCommand<
     shouldReturnValue?: ShouldReturnValue
   }): Promise<true extends ShouldReturnValue ? CommandResult<undefined, UpdateItemCommandOutput[]> : void> {
     const { UpdateExpression, ExpressionAttributeValues, ExpressionAttributeNames } = this.compile()
+    let rawResponses: UpdateItemCommandOutput[] = []
 
-    const updatePromises = primaryKeys.map((primaryKey) => {
-      return this.client.updateItem({
+    for (const primaryKey of primaryKeys) {
+      const result = await this.client.updateItem({
         TableName: this.tableName,
         Key: marshall(primaryKey),
         UpdateExpression,
         ExpressionAttributeValues,
         ExpressionAttributeNames,
         ...this.updateItemCommandInput,
+        ...(this.tokenBucket ? { ReturnConsumedCapacity: 'TOTAL' } : {}),
       })
-    })
 
-    if (!shouldReturnValue) {
-      return runParallel(updatePromises) as any
+      if (shouldReturnValue) {
+        rawResponses.push(result)
+      }
+
+      if (this.tokenBucket) {
+        const consumedCapacityUnits = result!.ConsumedCapacity!.CapacityUnits as number
+        await this.tokenBucket.removeTokens(consumedCapacityUnits)
+      }
     }
 
-    const rawResponses = await Promise.all(updatePromises)
-
-    return new CommandResult(undefined, rawResponses) as any
+    return (shouldReturnValue ? new CommandResult(undefined, rawResponses) : undefined) as any
   }
 }
 
@@ -106,9 +112,10 @@ export class Updatable<
   constructor(args: {
     client: DynamoDB
     tableName: string
+    getItemsCommand: GetItemsCommand
     basePartitionKey: PrimaryKeyNameCandidates<Model>
     baseSortKey?: PrimaryKeyNameCandidates<Model>
-    getItemsCommand: GetItemsCommand
+    tokenBucket?: TokenBucket
   }) {
     super(args)
     this.getItemsCommand = args.getItemsCommand
@@ -124,7 +131,7 @@ export class Updatable<
     return new UpdateItemsCommandReadableStream<Model, Updatable<Model, GetItemsCommand>>({
       command: this,
       shouldReturnValue: false,
-    }).run()
+    }).consume()
   }
 
   async *getRunGenerator({ shouldReturnValue = false }: { shouldReturnValue?: boolean } = {}) {

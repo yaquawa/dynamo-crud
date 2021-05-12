@@ -60,3 +60,5 @@ export type ExtractPathExpressions<T, TargetType = any> = _ExtractPathExpression
 export type GetTypeByPath<T, P> = P extends string ? Path<T, Split<P, '.'>> : never
 
 export type UnpackPromise<T extends Promise<any>> = T extends Promise<infer U> ? U : never
+
+export type TokenBucket = { removeTokens(count: number): Promise<number> }

@@ -5895,6 +5895,11 @@ jsprim@^1.2.2:
     array-includes "^3.1.2"
     object.assign "^4.1.2"
 
+just-performance@4.2.0:
+  version "4.2.0"
+  resolved "https://registry.yarnpkg.com/just-performance/-/just-performance-4.2.0.tgz#5509e348febde87072665d8325781573e2129f85"
+  integrity sha512-4TikKSf+Gb+Et5SnA4ppyrxLSf9qWFq+SqfdDdrgHE1KLwSch/Zi1AQB0TrE4ppYjZdUrHnwdx+6dyx0cx/HyA==
+
 kind-of@^3.0.2, kind-of@^3.0.3, kind-of@^3.2.0:
   version "3.2.2"
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-3.2.2.tgz#31ea21a734bab9bbb0f32466d893aea51e4a3c64"
@@ -5961,6 +5966,13 @@ lilconfig@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/lilconfig/-/lilconfig-2.0.2.tgz#9f802752254697d22a5c33e88d97b7329008c060"
   integrity sha512-4zUThttj8TQ4N7Pps92Z79jPf1OMcll4m61pivQSVk5MT78hVhNa2LrKTuNYD0AGLpmpf7zeIKOxSt6hHBfypw==
+
+limiter@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/limiter/-/limiter-2.0.1.tgz#030464e800c031b7f706e27e18f77d2b04e8a4e4"
+  integrity sha512-OhORJ29edCj2WVLYEou3AVRYZmobyTOy2A9yvDuwL68teu+vWLLlnJxEBMH4gDXIKlkyCTBL9JDEygSPOiwfMg==
+  dependencies:
+    just-performance "4.2.0"
 
 lines-and-columns@^1.1.6:
   version "1.1.6"

@@ -20,6 +20,12 @@ export class GetItemCommand<Model extends Record<string, any>> {
     return this
   }
 
+  select(...attributeNames: (keyof Model)[]): this {
+    return this.setCommandInput({
+      ProjectionExpression: attributeNames.join(', '),
+    })
+  }
+
   async run() {
     const rawResponse = await this.client.getItem({
       TableName: this.tableName,

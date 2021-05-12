@@ -3,10 +3,12 @@
 A wrapper lib for the official SDK which provide an easier to use CRUD API and type safety.
 
 ## Main Features
-* Advanced type hinting for TypeScript users
-* Auto marshall/unmarshall the DTO object
 * Easier to understand fluid APIs
-* Use stream for scan and query command
+* Auto marshall/unmarshall the DTO object
+* Use Stream API for scan and query command
+* Transparently use Batch GetItem/WriteItem
+* Advanced type hinting for TypeScript users
+* Adjust requests size automatically on BatchWriteItem
 
 ## Installation
 ```bash
@@ -27,14 +29,22 @@ const dynamoTable = new DynamoTable({
 })
 
 async function run() {
-  // scan items
+  /*
+  |---------------------------------------------------------------------------
+  | scan items
+  |---------------------------------------------------------------------------
+  */
   const readableStreamScan = dynamoTable.scan().createReadableStream()
 
   for await (const { data, rawResponse } of readableStreamScan) {
     console.log(data, rawResponse)
   }
 
-  // query items
+  /*
+  |---------------------------------------------------------------------------
+  | query items
+  |---------------------------------------------------------------------------
+  */
   const readableStreamQuery = dynamoTable
   .query({ id: 100 })
   .index("byTitle")
@@ -45,17 +55,65 @@ async function run() {
     console.log(data, rawResponse)
   }
 
-  // get a single item
+  /*
+  |---------------------------------------------------------------------------
+  | Get a single item (GetItem)
+  |---------------------------------------------------------------------------
+  */
   let { data, rawResponse } = await dynamoTable
   .find({ id: 100, title: "hello" })
   .run()
 
-  // delete a single item
+  /*
+  |---------------------------------------------------------------------------
+  | Get mutiple items (BatchGetItem)
+  |---------------------------------------------------------------------------
+  */
+  let { data, rawResponse } = await dynamoTable
+  .find([ { id: 100, title: "hello" }, { id: 99, title: "hi" } ])
+  .run()
+
+  /*
+  |---------------------------------------------------------------------------
+  | Delete a single item
+  |---------------------------------------------------------------------------
+  */
   let { data, rawResponse } = await dynamoTable
   .delete({ id: 100, title: "hello" })
   .run()
 
-  // update a single item
+  /*
+  |---------------------------------------------------------------------------
+  | Delete mutiple items (BatchWriteItem)
+  |---------------------------------------------------------------------------
+  */
+  let { data, rawResponse } = await dynamoTable
+  .delete([ { id: 100, title: "hello" }, { id: 99, title: "hi" } ])
+  .run()
+
+  /*
+  |---------------------------------------------------------------------------
+  | Put a single item (PutItem)
+  |---------------------------------------------------------------------------
+  */
+  let { data, rawResponse } = await dynamoTable
+  .put({ id: 100, title: "hello" })
+  .run()
+
+  /*
+  |---------------------------------------------------------------------------
+  | Put mutiple items (BatchWriteItem)
+  |---------------------------------------------------------------------------
+  */
+  let { data, rawResponse } = await dynamoTable
+  .put([ { id: 100, title: "hello" }, { id: 99, title: "hi" } ])
+  .run()
+
+  /*
+  |---------------------------------------------------------------------------
+  | update a single item
+  |---------------------------------------------------------------------------
+  */
   let { data, rawResponse } = await dynamoTable
   .update({ id: 100, title: "hello" })
   .set("title", "hello world")
@@ -63,7 +121,12 @@ async function run() {
   .delete("categories", new Set(["cat-1"]))
   .run()
 
-  // query then update the quired items
+  
+  /*
+  |---------------------------------------------------------------------------
+  | query then update the quired items
+  |---------------------------------------------------------------------------
+  */
   await dynamoTable
   .query({ id: 100 })
   .index("byLikeCount")
@@ -104,6 +167,8 @@ export type PostModel = {
 const dynamoTable = new DynamoTable<PostModel, 'id', 'title'>({
   client: mockDynamoDB,
   tableName: 'posts',
+  partitionKey: "id",
+  sortKey: "title",
 })
 
 

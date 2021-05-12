@@ -1,8 +1,8 @@
 import { CommandResult } from './CommandResult'
 import { Updatable } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
-import { ReadItemsCommandReadableStream } from './ReadableStream'
-import { GetPrimaryKey, PrimaryKeyNameCandidates } from './types'
+import { ReadItemsCommandReadableStream } from './stream'
+import { GetPrimaryKey, PrimaryKeyNameCandidates, TokenBucket } from './types'
 import { DynamoDB, QueryCommandInput } from '@aws-sdk/client-dynamodb'
 import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
 
@@ -13,20 +13,24 @@ export class QueryCommand<
 > extends KeyConditionExpressionBuilder<Model, PK, SK> {
   protected client: DynamoDB
   public readonly tableName: string
+  public readonly tokenBucket?: TokenBucket
   protected queryCommandInput: Partial<QueryCommandInput> = {}
 
   constructor({
     client,
     tableName,
     primaryKey,
+    tokenBucket,
   }: {
     client: DynamoDB
     tableName: string
     primaryKey: GetPrimaryKey<Model, PK, SK, false>
+    tokenBucket?: TokenBucket
   }) {
     super(primaryKey)
     this.client = client
     this.tableName = tableName
+    this.tokenBucket = tokenBucket
   }
 
   setCommandInput(options: Partial<QueryCommandInput>): this {
@@ -68,6 +72,7 @@ export class QueryCommand<
       ExpressionAttributeNames,
       ExpressionAttributeValues,
       ...this.queryCommandInput,
+      ...(this.tokenBucket ? { ReturnConsumedCapacity: 'TOTAL' } : {}),
     })
 
     let items: Model[] | undefined
@@ -93,12 +98,14 @@ export class UpdatableQueryCommand<
     primaryKey,
     basePartitionKey,
     baseSortKey,
+    tokenBucket,
   }: {
     client: DynamoDB
     tableName: string
     primaryKey: GetPrimaryKey<Model, PK, SK, false>
     basePartitionKey: PrimaryKeyNameCandidates<Model>
     baseSortKey?: PrimaryKeyNameCandidates<Model>
+    tokenBucket?: TokenBucket
   }) {
     super({ primaryKey, client, tableName })
 
@@ -108,6 +115,7 @@ export class UpdatableQueryCommand<
       basePartitionKey,
       baseSortKey,
       getItemsCommand: this,
+      tokenBucket,
     })
   }
 }
