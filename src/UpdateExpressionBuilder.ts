@@ -2,6 +2,7 @@ import { marshall } from '@aws-sdk/util-dynamodb'
 import { GetTypeByPath } from './types'
 import { SetType } from './types'
 import { ExtractPathExpressions } from './types'
+import { isEmpty } from './utils'
 
 type PlusMinusOperator = '+' | '-'
 type Actions<T = any> = { path: string; value: T }[]
@@ -192,8 +193,10 @@ export class UpdateExpressionBuilder<Model extends Record<string, any>> {
 
     return {
       UpdateExpression: updateExpression.join(`\n`),
-      ExpressionAttributeValues: marshall(expressionAttributeValues),
       ExpressionAttributeNames: expressionAttributeNames,
+      ...(isEmpty(expressionAttributeValues)
+        ? {}
+        : { ExpressionAttributeValues: marshall(expressionAttributeValues) }),
     }
   }
 }

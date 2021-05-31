@@ -20,6 +20,12 @@ export function pick<T extends Record<string, any>, Key extends keyof T>(obj: T,
   }, {} as any)
 }
 
+export function isEmpty(value: any): boolean {
+  if (typeof value === 'object') return Object.keys(value).length === 0
+
+  return !!value
+}
+
 export function getBinarySize(data: Record<string, any>): number {
   return Buffer.byteLength(JSON.stringify(data), 'utf8')
 }
