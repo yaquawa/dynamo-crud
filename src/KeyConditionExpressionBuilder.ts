@@ -37,7 +37,7 @@ export class KeyConditionExpressionBuilder<
   ): this {
     this.sortKeyName = sortKeyName
     this.sortKeyValue1 = sortKeyValues[0]
-    this.sortKeyValue2 = '1' in sortKeyValues ? sortKeyValues[1] : undefined
+    this.sortKeyValue2 = (sortKeyValues as any)[1] ?? undefined
 
     if (comparisonOperator === 'BETWEEN') {
       this.sortKeyCondition = `#sk BETWEEN :sv AND :sv2`
