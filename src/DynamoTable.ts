@@ -47,12 +47,13 @@ export class DynamoTable<
   }
 
   update(primaryKey: GetPrimaryKey<Model, BasePK, BaseSK>) {
-    const { client, tableName } = this
+    const { client, tableName, tokenBucket } = this
 
     return new UpdateItemCommand<Model>({
       client,
       tableName,
       primaryKey: primaryKey as any,
+      tokenBucket,
     })
   }
 
@@ -85,6 +86,7 @@ export class DynamoTable<
       client,
       tableName,
       primaryKey: primaryKey as any,
+      tokenBucket,
     }) as any
   }
 
@@ -103,6 +105,7 @@ export class DynamoTable<
       client,
       tableName,
       primaryKey: primaryKey as any,
+      tokenBucket,
     }) as any
   }
 
@@ -119,6 +122,7 @@ export class DynamoTable<
       client,
       tableName,
       item,
+      tokenBucket,
     }) as any
   }
 }

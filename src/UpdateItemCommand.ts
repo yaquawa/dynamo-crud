@@ -12,13 +12,20 @@ export class UpdateItemCommand<Model extends Record<string, any>> extends Update
   private readonly client: DynamoDB
   private readonly tableName: string
   private readonly primaryKey: PrimaryKeyCandidates<Model>
+  private readonly tokenBucket?: TokenBucket
   private updateItemCommandInput: Partial<UpdateItemCommandInput> = {}
 
-  constructor(args: { client: DynamoDB; tableName: string; primaryKey: PrimaryKeyCandidates<Model> }) {
+  constructor(args: {
+    client: DynamoDB
+    tableName: string
+    primaryKey: PrimaryKeyCandidates<Model>
+    tokenBucket?: TokenBucket
+  }) {
     super()
     this.client = args.client
     this.tableName = args.tableName
     this.primaryKey = args.primaryKey
+    this.tokenBucket = this.tokenBucket
   }
 
   setCommandInput(updateItemCommandInput: Partial<UpdateItemCommandInput>): this {
@@ -36,7 +43,14 @@ export class UpdateItemCommand<Model extends Record<string, any>> extends Update
       ExpressionAttributeValues,
       ExpressionAttributeNames,
       ...this.updateItemCommandInput,
+      ...(this.tokenBucket ? { ReturnConsumedCapacity: 'TOTAL' } : {}),
     })
+
+    if (this.tokenBucket) {
+      // TODO move to head
+      const consumedCapacityUnits = rawResponse.ConsumedCapacity!.CapacityUnits!
+      this.tokenBucket.removeTokens(consumedCapacityUnits)
+    }
 
     return new CommandResult(undefined, rawResponse)
   }
@@ -92,7 +106,7 @@ export class BatchUpdateItemCommand<
       }
 
       if (this.tokenBucket) {
-        const consumedCapacityUnits = result!.ConsumedCapacity!.CapacityUnits as number
+        const consumedCapacityUnits = result.ConsumedCapacity!.CapacityUnits!
         await this.tokenBucket.removeTokens(consumedCapacityUnits)
       }
     }

@@ -1,0 +1,74 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`KeyConditionExpressionBuilder build update expression 1`] = `
+Object {
+  "ExpressionAttributeNames": Object {
+    "#p0": "title",
+    "#p1": "tags",
+    "#p10": "tags",
+    "#p11": "author",
+    "#p12": "followers",
+    "#p13": "0",
+    "#p14": "name",
+    "#p15": "likeCount",
+    "#p16": "comments",
+    "#p17": "2",
+    "#p18": "likeCount",
+    "#p19": "categories",
+    "#p2": "author",
+    "#p3": "name",
+    "#p4": "likeCount",
+    "#p5": "id",
+    "#p6": "author",
+    "#p7": "id",
+    "#p8": "author",
+    "#p9": "name",
+  },
+  "ExpressionAttributeValues": Object {
+    ":v0": Object {
+      "S": "PostTitle",
+    },
+    ":v1": Object {
+      "L": Array [
+        Object {
+          "S": "tag1",
+        },
+        Object {
+          "S": "tag2",
+        },
+      ],
+    },
+    ":v2": Object {
+      "S": "foobar",
+    },
+    ":v3": Object {
+      "S": "foobar",
+    },
+    ":v4": Object {
+      "L": Array [
+        Object {
+          "S": "tag-1",
+        },
+        Object {
+          "S": "tag-2",
+        },
+      ],
+    },
+    ":v5": Object {
+      "N": "1",
+    },
+    ":v6": Object {
+      "N": "5",
+    },
+    ":v7": Object {
+      "SS": Array [
+        "cat-1",
+      ],
+    },
+  },
+  "UpdateExpression": "SET #p0 = :v0, #p1 = :v1, #p2.#p3 = :v2, #p4 = #p5 + #p6.#p7, #p8.#p9 = if_not_exists(#p8.#p9, :v3), #p10 = list_append(#p10, :v4)
+REMOVE #p11.#p12.#p13.#p14
+ADD #p15 :v5, #p16.#p17.#p18 :v6
+DELETE #p19 :v7",
+}
+`;

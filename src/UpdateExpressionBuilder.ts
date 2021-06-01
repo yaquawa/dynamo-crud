@@ -95,10 +95,21 @@ export class UpdateExpressionBuilder<Model extends Record<string, any>> {
     let expressionAttributeNames: Record<string, string> = {}
 
     const getPathPlaceholder = (path: string) => {
-      const pathPlaceholder = `#p${attributeNamePlaceholderId++}`
-      expressionAttributeNames[pathPlaceholder] = path
+      // e.g. path: A.B[0][3].C[1]
+      // return: #p0.#p1[0][3].#p2[1]
+      const originalPathSegments = path.split('.')
+      const attributeNames = originalPathSegments.map((pathSegment) => pathSegment.replace(/\[\d+\]/g, ''))
+      return attributeNames
+        .map((attributeName, index) => {
+          const attributeNamePlaceholder = `#p${attributeNamePlaceholderId++}`
 
-      return pathPlaceholder
+          const pathSegment = originalPathSegments[index].replace(attributeName, attributeNamePlaceholder)
+
+          expressionAttributeNames[attributeNamePlaceholder] = attributeName
+
+          return pathSegment
+        })
+        .join('.')
     }
 
     const getValuePlaceholder = (value: any) => {
