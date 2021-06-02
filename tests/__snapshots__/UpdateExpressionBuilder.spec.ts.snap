@@ -8,13 +8,11 @@ Object {
     "#p10": "tags",
     "#p11": "author",
     "#p12": "followers",
-    "#p13": "0",
-    "#p14": "name",
-    "#p15": "likeCount",
-    "#p16": "comments",
-    "#p17": "2",
-    "#p18": "likeCount",
-    "#p19": "categories",
+    "#p13": "name",
+    "#p14": "likeCount",
+    "#p15": "comments",
+    "#p16": "likeCount",
+    "#p17": "categories",
     "#p2": "author",
     "#p3": "name",
     "#p4": "likeCount",
@@ -67,8 +65,8 @@ Object {
     },
   },
   "UpdateExpression": "SET #p0 = :v0, #p1 = :v1, #p2.#p3 = :v2, #p4 = #p5 + #p6.#p7, #p8.#p9 = if_not_exists(#p8.#p9, :v3), #p10 = list_append(#p10, :v4)
-REMOVE #p11.#p12.#p13.#p14
-ADD #p15 :v5, #p16.#p17.#p18 :v6
-DELETE #p19 :v7",
+REMOVE #p11.#p12[0].#p13
+ADD #p14 :v5, #p15[2].#p16 :v6
+DELETE #p17 :v7",
 }
 `;
