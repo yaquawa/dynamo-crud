@@ -1,7 +1,7 @@
 {
   "name": "dynamo-crud",
   "author": "yaquawa",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "A wrapper lib for the official SDK provides an easier to use CRUD API and type safety.",
   "license": "MIT",
   "main": "dist/index.js",
