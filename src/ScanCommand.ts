@@ -30,6 +30,10 @@ export class ScanCommand<Model extends Record<string, any>> {
     return this
   }
 
+  getCommandInput() {
+    return this.scanCommandInput
+  }
+
   index(indexName: string): this {
     return this.setCommandInput({
       IndexName: indexName,

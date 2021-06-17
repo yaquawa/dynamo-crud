@@ -157,6 +157,9 @@ export class Updatable<
       return
     }
 
+    const originalCommandInput = this.getItemsCommand.getCommandInput()
+    this.getItemsCommand.select(...[this.basePartitionKey, ...(this.baseSortKey ? [this.baseSortKey] : [])])
+
     for await (const result of this.getItemsCommand.createReadableStream()) {
       const items = result.data as Model[]
 
@@ -170,5 +173,7 @@ export class Updatable<
 
       yield super._run({ primaryKeys: itemPrimaryKeys, shouldReturnValue })
     }
+
+    this.getItemsCommand.setCommandInput(originalCommandInput)
   }
 }

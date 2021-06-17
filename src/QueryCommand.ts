@@ -39,6 +39,10 @@ export class QueryCommand<
     return this
   }
 
+  getCommandInput() {
+    return this.queryCommandInput
+  }
+
   index(indexName: string): this {
     return this.setCommandInput({
       IndexName: indexName,
@@ -60,11 +64,8 @@ export class QueryCommand<
   }
 
   async _run() {
-    const {
-      KeyConditionExpression,
-      ExpressionAttributeValues,
-      ExpressionAttributeNames,
-    } = this.compile() as any
+    const { KeyConditionExpression, ExpressionAttributeValues, ExpressionAttributeNames } =
+      this.compile() as any
 
     const rawResponse = await this.client.query({
       TableName: this.tableName,

@@ -2,6 +2,7 @@ import { chunk, omit, pick } from './utils'
 import { ScanCommand } from './ScanCommand'
 import { QueryCommand } from './QueryCommand'
 import { CommandResult } from './CommandResult'
+import { BatchGetItemCommand } from './BatchGetItemCommand'
 import { BatchWriteItemCommand } from './BatchWriteItemCommand'
 import { PrimaryKeyNameCandidates, UnpackPromise } from './types'
 import { BatchUpdateItemCommand, Updatable } from './UpdateItemCommand'
@@ -13,7 +14,6 @@ import {
   KeysAndAttributes,
   BatchGetItemCommandOutput,
 } from '@aws-sdk/client-dynamodb'
-import { BatchGetItemCommand } from './BatchGetItemCommand'
 
 export class ReadItemsCommandReadableStream<
   Command extends QueryCommand<any, any, any> | ScanCommand<any>
@@ -33,23 +33,30 @@ export class ReadItemsCommandReadableStream<
     this.command._run().then(async (result) => {
       const { data, rawResponse } = result
 
-      if (data || rawResponse.LastEvaluatedKey) {
-        if (data) {
-          if (this.command.tokenBucket) {
-            const consumedCapacityUnits = result.rawResponse!.ConsumedCapacity!.CapacityUnits as number
-            await this.command.tokenBucket.removeTokens(consumedCapacityUnits)
-          }
-          this.push(result)
+      if (data) {
+        if (this.command.tokenBucket) {
+          const consumedCapacityUnits = result.rawResponse!.ConsumedCapacity!.CapacityUnits as number
+          await this.command.tokenBucket.removeTokens(consumedCapacityUnits)
         }
 
         if (rawResponse.LastEvaluatedKey) {
           this.command.setCommandInput({ ExclusiveStartKey: rawResponse.LastEvaluatedKey })
+          this.push(result)
         } else {
+          this.push(result)
           this.finishPush()
         }
-      } else {
-        this.finishPush()
+
+        return
       }
+
+      if (rawResponse.LastEvaluatedKey) {
+        this.command.setCommandInput({ ExclusiveStartKey: rawResponse.LastEvaluatedKey })
+        this._read()
+        return
+      }
+
+      this.finishPush()
     })
   }
 
