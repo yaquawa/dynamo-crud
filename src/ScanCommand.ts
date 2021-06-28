@@ -4,6 +4,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { PrimaryKeyNameCandidates, TokenBucket } from './types'
 import { ReadItemsCommandReadableStream } from './stream'
 import { DynamoDB, ScanCommandInput } from '@aws-sdk/client-dynamodb'
+import { selectAttributes } from './utils'
 
 export class ScanCommand<Model extends Record<string, any>> {
   protected client: DynamoDB
@@ -41,9 +42,9 @@ export class ScanCommand<Model extends Record<string, any>> {
   }
 
   select(...attributeNames: (keyof Model)[]): this {
-    return this.setCommandInput({
-      ProjectionExpression: attributeNames.join(', '),
-    })
+    selectAttributes(this.getCommandInput(), attributeNames as string[])
+
+    return this
   }
 
   limit(limit: number): this {

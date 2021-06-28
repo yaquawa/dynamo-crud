@@ -2,6 +2,7 @@ import { CommandResult } from './CommandResult'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { DynamoDB, GetItemCommandInput } from '@aws-sdk/client-dynamodb'
 import { PrimaryKeyCandidates, TokenBucket } from './types'
+import { selectAttributes } from './utils'
 
 export class GetItemCommand<Model extends Record<string, any>> {
   private readonly client: DynamoDB
@@ -27,10 +28,14 @@ export class GetItemCommand<Model extends Record<string, any>> {
     return this
   }
 
+  getCommandInput() {
+    return this.getItemCommandInput
+  }
+
   select(...attributeNames: (keyof Model)[]): this {
-    return this.setCommandInput({
-      ProjectionExpression: attributeNames.join(', '),
-    })
+    selectAttributes(this.getCommandInput(), attributeNames as string[])
+
+    return this
   }
 
   async run() {

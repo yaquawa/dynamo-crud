@@ -138,6 +138,27 @@ async function run() {
 run()
 ```
 
+## Utils
+* `consume`
+* `getOneItem`
+
+Examples:
+
+```js
+const scanCommand = dynamoTable.scan()
+const queryCommand = dynamoTable.query({ id: 100 }).index('byID')
+
+async function run() {
+  const item = await getOneItem()
+
+  await consume((item) => {
+    console.log(item)
+  }, scanCommand)
+}
+
+run()
+```
+
 ## TypeScript
 To obtain the type hinting, give the type of the table structure, the partition key, the sort key.
 

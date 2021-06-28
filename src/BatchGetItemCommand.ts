@@ -3,11 +3,12 @@ import { CommandResult } from './CommandResult'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { DynamoDB, KeysAndAttributes, BatchGetItemCommandInput } from '@aws-sdk/client-dynamodb'
 import { BatchGetItemCommandStream } from './stream'
+import { selectAttributes } from './utils'
 
 export class BatchGetItemCommand<Model extends Record<string, any>> {
   private readonly client: DynamoDB
   private readonly tableName: string
-  private projectionExpression?: string
+  private selectedAttributes?: (keyof Model)[]
   private readonly primaryKeys: PrimaryKeyCandidates<Model>[]
   private batchGetItemCommandInput: Partial<BatchGetItemCommandInput> = {}
   public readonly tokenBucket?: TokenBucket
@@ -29,8 +30,12 @@ export class BatchGetItemCommand<Model extends Record<string, any>> {
     return this
   }
 
+  getCommandInput() {
+    return this.batchGetItemCommandInput
+  }
+
   select(...attributeNames: (keyof Model)[]): this {
-    this.projectionExpression = attributeNames.join(', ')
+    this.selectedAttributes = attributeNames
 
     return this
   }
@@ -67,9 +72,12 @@ export class BatchGetItemCommand<Model extends Record<string, any>> {
       return marshall(primaryKey)
     })
 
-    return {
+    const keysAndAttributes: KeysAndAttributes = {
       Keys,
-      ...(this.projectionExpression ? { ProjectionExpression: this.projectionExpression } : {}),
     }
+
+    selectAttributes(keysAndAttributes, this.selectedAttributes as string[])
+
+    return keysAndAttributes
   }
 }

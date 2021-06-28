@@ -1,6 +1,7 @@
 import { UpdatableQueryCommand } from './QueryCommand'
 import { UpdatableScanCommand } from './ScanCommand'
 import { GetCommandModel } from './types'
+import { QueryCommandInput } from '@aws-sdk/client-dynamodb'
 
 export function omit<T extends Record<string, any>, Key extends keyof T>(obj: T, keys: Key[]): Omit<T, Key> {
   const cloneObj = { ...obj }
@@ -123,4 +124,63 @@ export async function getOneItem<
   }, command)
 
   return result
+}
+
+export function getExpressionAttributeNames(...attributeNames: string[]): Record<string, string> {
+  const getKey = (value: string) => {
+    const isAlphanumeric = /[a-zA-Z\d]/
+    return (
+      '#' +
+      Object.values(value)
+        .map((char) => (isAlphanumeric.test(char) ? char : `c${char.codePointAt(0)}`))
+        .join('')
+    )
+  }
+
+  return attributeNames.reduce<Record<string, string>>((expressionAttributeNames, attributeName) => {
+    const key = getKey(attributeName)
+    return Object.assign(expressionAttributeNames, { [key]: attributeName })
+  }, {})
+}
+
+export function selectAttributes<
+  CommandInput extends Partial<Pick<QueryCommandInput, 'ProjectionExpression' | 'ExpressionAttributeNames'>>
+>(originalCommandInput: CommandInput, attributeNames: string[]) {
+  const ExpressionAttributeNames: QueryCommandInput['ExpressionAttributeNames'] = getExpressionAttributeNames(
+    ...(attributeNames as string[])
+  )
+  const ProjectionExpression: QueryCommandInput['ProjectionExpression'] =
+    Object.keys(ExpressionAttributeNames).join(', ')
+
+  if (originalCommandInput.ExpressionAttributeNames) {
+    Object.assign(originalCommandInput.ExpressionAttributeNames, ExpressionAttributeNames)
+  } else {
+    originalCommandInput.ExpressionAttributeNames = ExpressionAttributeNames
+  }
+
+  originalCommandInput.ProjectionExpression = ProjectionExpression
+}
+
+export function mergeCommandInput<
+  CommandInput extends Partial<
+    Pick<QueryCommandInput, 'ProjectionExpression' | 'ExpressionAttributeNames' | 'ExpressionAttributeValues'>
+  >
+>(target: CommandInput, source: CommandInput): CommandInput {
+  const merged = { ...target, ...source }
+
+  if (target.ExpressionAttributeNames && source.ExpressionAttributeNames) {
+    merged.ExpressionAttributeNames = {
+      ...target.ExpressionAttributeNames,
+      ...source.ExpressionAttributeNames,
+    }
+  }
+
+  if (target.ExpressionAttributeValues && source.ExpressionAttributeValues) {
+    merged.ExpressionAttributeValues = {
+      ...target.ExpressionAttributeValues,
+      ...source.ExpressionAttributeValues,
+    }
+  }
+
+  return merged
 }

@@ -1,9 +1,10 @@
+import { mergeCommandInput, selectAttributes } from './utils'
 import { CommandResult } from './CommandResult'
 import { Updatable } from './UpdateItemCommand'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { ReadItemsCommandReadableStream } from './stream'
-import { GetPrimaryKey, PrimaryKeyNameCandidates, TokenBucket } from './types'
 import { DynamoDB, QueryCommandInput } from '@aws-sdk/client-dynamodb'
+import { GetPrimaryKey, PrimaryKeyNameCandidates, TokenBucket } from './types'
 import { KeyConditionExpressionBuilder } from './KeyConditionExpressionBuilder'
 
 export class QueryCommand<
@@ -50,9 +51,9 @@ export class QueryCommand<
   }
 
   select(...attributeNames: (keyof Model)[]): this {
-    return this.setCommandInput({
-      ProjectionExpression: attributeNames.join(', '),
-    })
+    selectAttributes(this.getCommandInput(), attributeNames as string[])
+
+    return this
   }
 
   limit(limit: number): this {
@@ -69,11 +70,15 @@ export class QueryCommand<
 
     const rawResponse = await this.client.query({
       TableName: this.tableName,
-      KeyConditionExpression,
-      ExpressionAttributeNames,
-      ExpressionAttributeValues,
-      ...this.queryCommandInput,
-      ...(this.tokenBucket ? { ReturnConsumedCapacity: 'TOTAL' } : {}),
+      ...mergeCommandInput(
+        {
+          KeyConditionExpression,
+          ExpressionAttributeNames,
+          ExpressionAttributeValues,
+          ...(this.tokenBucket ? { ReturnConsumedCapacity: 'TOTAL' } : {}),
+        },
+        this.getCommandInput()
+      ),
     })
 
     let items: Model[] | undefined
