@@ -9,3 +9,5 @@ export * from './KeyConditionExpressionBuilder'
 
 export * from './types'
 export * from './DynamoTable'
+export * from './stream'
+export { consume, getOneItem } from './utils'

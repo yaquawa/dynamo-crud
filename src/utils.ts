@@ -1,3 +1,7 @@
+import { UpdatableQueryCommand } from './QueryCommand'
+import { UpdatableScanCommand } from './ScanCommand'
+import { GetCommandModel } from './types'
+
 export function omit<T extends Record<string, any>, Key extends keyof T>(obj: T, keys: Key[]): Omit<T, Key> {
   const cloneObj = { ...obj }
 
@@ -88,4 +92,35 @@ export function runParallel(promises: Promise<any>[]): Promise<void> {
         })
     }
   })
+}
+
+export async function consume<
+  Command extends UpdatableQueryCommand<any, any, any> | UpdatableScanCommand<any>
+>(
+  consumer: (model: GetCommandModel<Command>) => void | null | Promise<void | null>,
+  command: Command
+): Promise<void> {
+  for await (const { data: models } of command.createReadableStream()) {
+    if (!models) continue
+
+    for (const model of models) {
+      const result = await consumer(model)
+      if (result === null) return
+    }
+  }
+}
+
+export async function getOneItem<
+  Command extends UpdatableQueryCommand<any, any, any> | UpdatableScanCommand<any>
+>(command: Command): Promise<GetCommandModel<Command> | null> {
+  let result: GetCommandModel<Command> | null = null
+
+  command.limit(1)
+
+  await consume((model) => {
+    result = model
+    return null
+  }, command)
+
+  return result
 }

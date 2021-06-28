@@ -1,6 +1,8 @@
 import { Path } from 'ts-toolbelt/out/Object/Path'
 import { Split } from 'ts-toolbelt/out/String/Split'
 import { Optional } from 'ts-toolbelt/out/Object/Optional'
+import { UpdatableQueryCommand } from './QueryCommand'
+import { UpdatableScanCommand } from './ScanCommand'
 
 type BinaryTypes =
   | ArrayBuffer
@@ -62,3 +64,11 @@ export type GetTypeByPath<T, P> = P extends string ? Path<T, Split<P, '.'>> : ne
 export type UnpackPromise<T extends Promise<any>> = T extends Promise<infer U> ? U : never
 
 export type TokenBucket = { removeTokens(count: number): Promise<number> }
+
+export type GetCommandModel<
+  Command extends UpdatableQueryCommand<any, any, any> | UpdatableScanCommand<any>
+> = Command extends UpdatableQueryCommand<infer Model, any, any>
+  ? Model
+  : Command extends UpdatableScanCommand<infer Model>
+  ? Model
+  : never
