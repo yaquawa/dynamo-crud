@@ -44,10 +44,9 @@ type _ExtractPathExpressions<T, TargetType> = Exclude<
       ?
           | (T[P] extends TargetType ? P : never)
           | (ExtractArrayType<T[P]> extends TargetType ? `${P}.${number}` : never)
-          | `${P}.${number}.${Exclude<
-              _ExtractPathExpressions<T[P][number], TargetType>,
-              keyof number | keyof string
-            >}`
+          | (T[P] extends string | number | boolean
+              ? never
+              : `${P}.${number}.${_ExtractPathExpressions<T[P][number], TargetType>}`)
       : T[P] extends ObjectType
       ? `${P}.${_ExtractPathExpressions<T[P], TargetType>}` | (T[P] extends TargetType ? P : never)
       : T[P] extends TargetType
