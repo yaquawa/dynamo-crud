@@ -57,7 +57,9 @@ export class ReadItemsCommandReadableStream<
       }
 
       this.finishPush()
-    })
+    }).catch((error) => {
+         this.destroy(error)
+      })
   }
 
   private finishPush() {
