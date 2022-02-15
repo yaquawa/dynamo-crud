@@ -1,5 +1,3 @@
-import { Path } from 'ts-toolbelt/out/Object/Path'
-import { Split } from 'ts-toolbelt/out/String/Split'
 import { Optional } from 'ts-toolbelt/out/Object/Optional'
 import { UpdatableQueryCommand } from './QueryCommand'
 import { UpdatableScanCommand } from './ScanCommand'
@@ -58,7 +56,19 @@ type _ExtractPathExpressions<T, TargetType> = Exclude<
 
 export type ExtractPathExpressions<T, TargetType = any> = _ExtractPathExpressions<Required<T>, TargetType>
 
-export type GetTypeByPath<T, P> = P extends string ? Path<T, Split<P, '.'>> : never
+type Idx<T, K> = Exclude<keyof T, symbol> extends infer KK
+  ? KK extends keyof T
+    ? K extends `${Exclude<KK, symbol>}`
+      ? T[KK]
+      : never
+    : never
+  : never
+
+export type GetTypeByPath<T, K> = T extends object
+  ? K extends `${infer F}.${infer R}`
+    ? GetTypeByPath<Idx<T, F>, R>
+    : Idx<T, K>
+  : never
 
 export type UnpackPromise<T extends Promise<any>> = T extends Promise<infer U> ? U : never
 
